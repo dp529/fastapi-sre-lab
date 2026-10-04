@@ -43,3 +43,12 @@ Instrumentator().instrument(app).expose(app)
 @app.get("/fail")
 def fail():
     raise RuntimeError("intentional failure for SRE test")
+
+@app.get("/cpu")
+def cpu(seconds: int = 5):
+    import time
+    end = time.time() + seconds
+    x = 0
+    while time.time() < end:
+        x += 1
+    return {"status": "done", "iterations": x}

@@ -1,0 +1,4 @@
+defaultRules:
+  disabled:
+    KubeControllerManagerDown: true
+    KubeSchedulerDown: true

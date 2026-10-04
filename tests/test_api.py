@@ -14,3 +14,6 @@ def test_orders():
     response = client.get("/orders")
     assert response.status_code == 200
     assert response.json()["version"] == "v1"
+
+def test_intentional_failure():
+    assert 1 == 2

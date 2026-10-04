@@ -1,0 +1,19 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: {{ include "fastapi-sre-lab.fullname" . }}-alerts
+  labels:
+    release: kube-prometheus-stack
+    {{- include "fastapi-sre-lab.labels" . | nindent 4 }}
+spec:
+  groups:
+    - name: fastapi-sre-alerts
+      rules:
+        - alert: FastAPIHigh5xxRate
+          expr: sum(rate(http_requests_total{status="5xx"}[2m])) > 0.1
+          for: 1m
+          labels:
+            severity: warning
+          annotations:
+            summary: "FastAPI 5xx rate is high"
+            description: "FastAPI is returning more than 0.1 HTTP 5xx responses/sec for 1 minute."

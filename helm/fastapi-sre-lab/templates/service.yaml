@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "fastapi-sre-lab.fullname" . }}
+  labels:
+    {{- include "fastapi-sre-lab.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.service.type }}
+  ports:
+    - port: {{ .Values.service.port }}
+      targetPort: http
+      protocol: TCP
+      name: http
+  selector:
+    {{- include "fastapi-sre-lab.selectorLabels" . | nindent 4 }}

@@ -2,4 +2,3 @@ fastapi
 uvicorn[standard]
 pytest
 httpx
-this-package-does-not-exist-99999

@@ -3,7 +3,7 @@ replicaCount: 3
 image:
   repository: 036010600884.dkr.ecr.us-east-1.amazonaws.com/fastapi-sre-lab
   pullPolicy: IfNotPresent
-  tag: "28c6a3ec5f2d95be8a76bb9153db12071b6c8c5e"
+  tag: "182bbae268a68187187379f4cb538682b0b64556"
 
 imagePullSecrets: []
 

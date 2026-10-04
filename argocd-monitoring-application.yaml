@@ -1,4 +1,4 @@
-﻿apiVersion: argoproj.io/v1alpha1
+apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
   name: kube-prometheus-stack
@@ -18,6 +18,10 @@ spec:
     - repoURL: https://github.com/dp529/fastapi-sre-lab.git
       targetRevision: main
       ref: values
+
+    - repoURL: https://github.com/dp529/fastapi-sre-lab.git
+      targetRevision: main
+      path: monitoring/manifests
 
   destination:
     server: https://kubernetes.default.svc

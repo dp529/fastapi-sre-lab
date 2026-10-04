@@ -39,3 +39,7 @@ def orders():
 from prometheus_fastapi_instrumentator import Instrumentator
 
 Instrumentator().instrument(app).expose(app)
+
+@app.get("/fail")
+def fail():
+    raise RuntimeError("intentional failure for SRE test")

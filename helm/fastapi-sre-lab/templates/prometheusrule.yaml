@@ -1,4 +1,4 @@
-apiVersion: monitoring.coreos.com/v1
+﻿apiVersion: monitoring.coreos.com/v1
 kind: PrometheusRule
 metadata:
   name: {{ include "fastapi-sre-lab.fullname" . }}-alerts
@@ -13,6 +13,7 @@ spec:
           expr: sum(rate(http_requests_total{status="5xx"}[2m])) > 0.1
           for: 1m
           labels:
+            namespace: fastapi
             severity: warning
           annotations:
             summary: "FastAPI 5xx rate is high"

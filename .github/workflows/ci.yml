@@ -4,47 +4,117 @@ on:
   push:
     branches:
       - main
+    paths-ignore:
+      - "helm/**"
+      - "argocd-application.yaml"
+
+concurrency:
+  group: fastapi-main
+  cancel-in-progress: true
 
 permissions:
   id-token: write
-  contents: read
+  contents: write
+
+env:
+  AWS_REGION: us-east-1
+  ECR_REGISTRY: 036010600884.dkr.ecr.us-east-1.amazonaws.com
+  ECR_REPOSITORY: fastapi-sre-lab
+  IMAGE_TAG: ${{ github.sha }}
 
 jobs:
-  build:
+  build-test-scan-push:
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout source
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v7
         with:
           python-version: "3.12"
+          cache: pip
 
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Run Tests
+      - name: Run tests
         run: |
           python -m pytest tests/ -v
 
+      - name: Build Docker image
+        run: |
+          docker build \
+            -t fastapi-sre-lab:${IMAGE_TAG} \
+            .
+
+      - name: Scan image with Trivy
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: fastapi-sre-lab:${{ github.sha }}
+          format: table
+          exit-code: "1"
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@v6.3.0
         with:
           role-to-assume: arn:aws:iam::036010600884:role/GitHubActionsECRPushRole
-          aws-region: us-east-1
+          aws-region: ${{ env.AWS_REGION }}
 
       - name: Login to Amazon ECR
-        uses: aws-actions/amazon-ecr-login@v2
+        uses: aws-actions/amazon-ecr-login@v2.1.6
 
-      - name: Build and push Docker image
-        env:
-          ECR_REGISTRY: 036010600884.dkr.ecr.us-east-1.amazonaws.com
-          ECR_REPOSITORY: fastapi-sre-lab
-          IMAGE_TAG: ${{ github.sha }}
+      - name: Tag and push image to ECR
         run: |
-          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
-          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          docker tag \
+            fastapi-sre-lab:${IMAGE_TAG} \
+            ${ECR_REGISTRY}/${ECR_REPOSITORY}:${IMAGE_TAG}
+
+          docker push \
+            ${ECR_REGISTRY}/${ECR_REPOSITORY}:${IMAGE_TAG}
+
+      - name: Update Helm image tag
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import os
+          import re
+
+          p = Path("helm/fastapi-sre-lab/values.yaml")
+          text = p.read_text()
+
+          sha = os.environ["IMAGE_TAG"]
+
+          text, count = re.subn(
+              r'(?m)^(\s*tag:\s*)".*"$',
+              rf'\1"{sha}"',
+              text,
+              count=1
+          )
+
+          if count != 1:
+              raise SystemExit("Could not update image tag in Helm values.yaml")
+
+          p.write_text(text)
+          PY
+
+      - name: Commit Helm promotion
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add helm/fastapi-sre-lab/values.yaml
+
+          if git diff --cached --quiet; then
+            echo "Helm tag already current"
+            exit 0
+          fi
+
+          git commit -m "Promote image ${IMAGE_TAG}"
+          git push

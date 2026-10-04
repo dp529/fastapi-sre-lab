@@ -1,0 +1,23 @@
+apiVersion: monitoring.coreos.com/v1alpha1
+kind: AlertmanagerConfig
+metadata:
+  name: fastapi-slack
+  namespace: {{ .Release.Namespace }}
+spec:
+  route:
+    receiver: slack
+    groupBy:
+      - alertname
+    groupWait: 10s
+    groupInterval: 1m
+    repeatInterval: 15m
+  receivers:
+    - name: slack
+      slackConfigs:
+        - apiURL:
+            name: fastapi-slack-webhook
+            key: url
+          channel: "#sre-alerts"
+          sendResolved: true
+          title: '{{ "{{ .Status | toUpper }}: {{ .CommonLabels.alertname }}" }}'
+          text: '{{ "{{ .CommonAnnotations.summary }} - {{ .CommonAnnotations.description }}" }}'
